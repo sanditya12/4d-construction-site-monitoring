@@ -1,7 +1,3 @@
-Here is a polished, professional, and highly structured starter `README.md` for your repository. It explains the entire 4D architecture, the 5-module pipeline, and how to use `uv` and COLMAP to run the project.
-
----
-
 # 4D Spatio-Temporal Construction Reconstruction
 
 A high-performance computer vision pipeline designed to ingest chronological 2D image sequences from dynamic construction sites, perform sparse 3D reconstruction, register multiple sessions into a unified 4D timeline, and utilize human-in-the-loop AI segmentation to detect and isolate physical changes over time.
