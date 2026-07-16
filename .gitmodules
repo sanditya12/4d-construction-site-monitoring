@@ -1,0 +1,3 @@
+[submodule "02_gaussian_splatting/submodule/3DGRUT_forked"]
+	path = 02_gaussian_splatting/submodule/3DGRUT_forked
+	url = https://github.com/ImanishMonis/3DGRUT_research.git
