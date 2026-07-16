@@ -1,0 +1,47 @@
+==========================================
+
+DATA FOLDERS
+
+==========================================
+
+data/raw/*
+data/processed/*
+data/outputs/*
+
+EXCEPT the .gitkeep files. This forces Git to track the empty folders!
+
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/outputs/.gitkeep
+
+==========================================
+
+PYTHON ENVIRONMENTS & CACHE
+
+==========================================
+
+pycache/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+==========================================
+
+OS GENERATED FILES
+
+==========================================
+
+.DS_Store
+Thumbs.db
+
+==========================================
+
+NODE / WEB APP
+
+==========================================
+
+05_ui/node_modules/
+05_ui/dist/
+05_ui/build/
