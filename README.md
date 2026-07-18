@@ -1,6 +1,6 @@
 # 4D Spatio-Temporal Construction Reconstruction
 
-A high-performance computer vision pipeline designed to ingest chronological 2D image sequences from dynamic construction sites, perform sparse 3D reconstruction, register multiple sessions into a unified 4D timeline, and utilize human-in-the-loop AI segmentation to detect and isolate physical changes over time.
+Pipeline designed to ingest chronological 2D image sequences from dynamic construction sites, perform sparse 3D reconstruction, register multiple sessions into a unified 4D timeline.
 
 ---
 
@@ -68,79 +68,4 @@ npm run dev
 
 ## 🚀 Running the Pipeline
 
-### Step 1: Preprocessing & Pose Estimation
-
-Place your raw construction photos inside `data/raw/`. Then, run the preprocessors and automated COLMAP wrapper:
-
-```bash
-# Prepare images and run Structure-from-Motion
-uv run 01_pose_estimation/run_colmap_pipeline.py
-
-```
-
-### Step 2: 3D Reconstruction
-
-Train your Gaussian Splat using the sparse geometry solved by COLMAP:
-
-```bash
-uv run 02_reconstruction/train_splat.py
-
-```
-
-### Step 3: Run Change Isolation & Metadata Encoding
-
-Once your 3D Splat is trained and you have generated 2D masks of the changes (e.g., using X-AnyLabeling), run the backprojection and metadata injection script:
-
-```bash
-uv run 04_change_detection/encode_metadata.py
-
-```
-
-This script evaluates the camera rays and appends an invisible `isolated_object` column (`uint8`) to your `.ply` file.
-
----
-
-## 📁 Repository Structure
-
-```text
-4d-construction-reconstruction/
-├── .gitignore
-├── pyproject.toml                   # Managed by uv
-├── uv.lock                          # Python lockfile
-├── README.md
-│
-├── data/                            # Local sandbox (ignored by Git)
-│   ├── raw/                         # Place raw images here (uses .gitkeep)
-│   ├── processed/                   # Preprocessed images & masks
-│   └── outputs/                     # Outputs, transform matrices, splats
-│
-├── 01_pose_estimation/
-│   ├── preprocess_fisheye.py        # Static lens masking
-│   ├── mask_dynamic_objects.py      # Camera operator cleanup
-│   └── run_colmap_pipeline.py       # COLMAP automation wrapper
-│
-├── 02_reconstruction/
-│   ├── third_party/
-│   │   └── 3DGUT/                   # Tweaked reconstruction repo (Git Submodule)
-│   └── train_splat.py
-│
-├── 03_alignment/
-│   ├── extract_features.py
-│   └── compute_transform.py         # Solves spatial session alignment
-│
-├── 04_change_detection/
-│   ├── segment_changes.py           # 2D AI segmentation inference
-│   ├── project_masks_3d.py          # Vectorized matrix raycasting
-│   └── encode_metadata.py           # Injects 'isolated_object' into .ply
-│
-└── 05_ui/                           # React / Vite / Spark.js Web Interface
-
-```
-
----
-
-## 🔒 Git & Data Policy
-
-Because raw 2D image sequences and 3D `.ply` files easily exceed Git's storage limits, **all raw, processed, and output data directories are explicitly ignored by Git** via `.gitignore`.
-
-To maintain repository structure when cloning, the project uses empty `.gitkeep` files inside the `data/` directory tree. **Do not force commit `.ply`, `.bin`, or `.db` files to GitHub.**
+Please refer to individual README.md file on each of the pipeline's directory.
