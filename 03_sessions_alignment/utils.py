@@ -89,20 +89,6 @@ def localize_t2(
         db_descriptors=global_t1,
     )
 
-    # --- Fix db-side names to match COLMAP model ---
-    # pairs db-side has "t1_0001.png", COLMAP model has "0001.png"
-    # so strip the "t1_" prefix to get the COLMAP name
-    colmap_names = {img.name for img in pycolmap.Reconstruction(str(sfm_dir)).images.values()}
-    fixed_pairs = out_dir / "pairs-t2-to-t1-fixed.txt"
-    with open(pairs_path) as fin, open(fixed_pairs, "w") as fout:
-        for line in fin:
-            q, db = line.strip().split()
-            # db is "t1_0001.png" -> strip prefix -> "0001.png"
-            db_bare = db[len("t1_"):]
-            db_fixed = db_bare if db_bare in colmap_names else db
-            fout.write(f"{q} {db_fixed}\n")
-    pairs_path = fixed_pairs
-
     # --- Local features ---
     local_feats = extract_features.main(
         FEATURE_CONF, unified, out_dir,
@@ -116,23 +102,24 @@ def localize_t2(
         matches=out_dir / "matches.h5",
     )
 
+    # --- Fix db-side names to match COLMAP model ---
+    colmap_names = {img.name for img in pycolmap.Reconstruction(str(sfm_dir)).images.values()}
+    fixed_pairs = out_dir / "pairs-t2-to-t1-fixed.txt"
+    with open(pairs_path) as fin, open(fixed_pairs, "w") as fout:
+        for line in fin:
+            q, db = line.strip().split()
+            # db is "t1_0001.png" -> strip prefix -> "0001.png"
+            db_bare = db[len("t1_"):]
+            db_fixed = db_bare if db_bare in colmap_names else db
+            fout.write(f"{q} {db_fixed}\n")
+    pairs_path = fixed_pairs
+    
     # --- PnP localization uses fixed pairs ---
     results_path = out_dir / "t2_poses.txt"
     localize_sfm.main(
         reference_sfm=sfm_dir,
         queries=queries_file,
         retrieval=fixed_pairs,   # bare db names for COLMAP
-        features=local_feats,
-        matches=matches,
-        results=results_path,
-    )
-
-    # --- PnP localization ---
-    results_path = out_dir / "t2_poses.txt"
-    localize_sfm.main(
-        reference_sfm=sfm_dir,
-        queries=queries_file,
-        retrieval=pairs_path,
         features=local_feats,
         matches=matches,
         results=results_path,
