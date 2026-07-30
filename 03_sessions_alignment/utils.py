@@ -95,31 +95,41 @@ def localize_t2(
         image_list=full_list,
     )
 
-    # --- Match features ---
+    # --- Fix pairs for matching (keep t1_ prefix, feature h5 has t1_ keys) ---
+    # pairs file already has t2_/t1_ prefixes — use as-is for matching
     matches = match_features.main(
-        MATCHER_CONF, pairs_path,  
+        MATCHER_CONF, pairs_path,  # original pairs with t1_/t2_ prefixes
         FEATURE_CONF["output"], out_dir,
         matches=out_dir / "matches.h5",
     )
 
-    # --- Fix db-side names to match COLMAP model ---
-    colmap_names = {img.name for img in pycolmap.Reconstruction(str(sfm_dir)).images.values()}
-    fixed_pairs = out_dir / "pairs-t2-to-t1-fixed.txt"
-    with open(pairs_path) as fin, open(fixed_pairs, "w") as fout:
-        for line in fin:
-            q, db = line.strip().split()
-            # db is "t1_0001.png" -> strip prefix -> "0001.png"
-            db_bare = db[len("t1_"):]
-            db_fixed = db_bare if db_bare in colmap_names else db
-            fout.write(f"{q} {db_fixed}\n")
-    pairs_path = fixed_pairs
-    
-    # --- PnP localization uses fixed pairs ---
+    # # --- Fix db-side names for localization only (strip t1_ to match COLMAP) ---
+    # colmap_names = {img.name for img in pycolmap.Reconstruction(str(sfm_dir)).images.values()}
+    # fixed_pairs = out_dir / "pairs-t2-to-t1-fixed.txt"
+    # with open(pairs_path) as fin, open(fixed_pairs, "w") as fout:
+    #     for line in fin:
+    #         q, db = line.strip().split()
+    #         db_bare = db[len("t1_"):]
+    #         db_fixed = db_bare if db_bare in colmap_names else db
+    #         fout.write(f"{q} {db_fixed}\n")
+
+    # # --- PnP localization uses fixed pairs ---
+    # results_path = out_dir / "t2_poses.txt"
+    # localize_sfm.main(
+    #     reference_sfm=sfm_dir,
+    #     queries=queries_file,
+    #     retrieval=fixed_pairs,   # bare db names for COLMAP
+    #     features=local_feats,
+    #     matches=matches,
+    #     results=results_path,
+    # )
+
+    # --- PnP localization ---
     results_path = out_dir / "t2_poses.txt"
     localize_sfm.main(
         reference_sfm=sfm_dir,
         queries=queries_file,
-        retrieval=fixed_pairs,   # bare db names for COLMAP
+        retrieval=pairs_path,
         features=local_feats,
         matches=matches,
         results=results_path,
