@@ -20,6 +20,10 @@ from hloc import (
     localize_sfm,
 )
 
+try:
+    from hloc import pairs_from_sequential
+except ImportError:
+    pairs_from_sequential = None
 
 # ---------------------------------------------------------------------------
 # Configs for hloc
@@ -136,3 +140,90 @@ def localize_t2(
     )
 
     return results_path
+
+
+# ---------------------------------------------------------------------------
+# Build t1 reconstruction (Optional step if SfM reconstructions not available)
+# ---------------------------------------------------------------------------
+def list_images_relative(root: Path, image_dir: Path, exts=(".jpg", ".jpeg", ".png")):
+    """
+    Return a sorted list of image paths relative to `root`, for all images
+    found in `image_dir`. E.g. if root=project and image_dir=project/t1/images,
+    returns ["t1/images/frame_0001.jpg", ...].
+    """
+    files = [
+        p for p in sorted(image_dir.iterdir())
+        if p.suffix.lower() in exts
+    ]
+    return [str(p.relative_to(root)) for p in files]
+
+
+def build_t1_reconstruction(
+    root: Path,
+    t1_images: Path,
+    out_dir: Path,
+    sequential: bool = False,
+    seq_window: int = 10,
+    num_retrieval_matches: int = 10,
+):
+    
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    image_list = list_images_relative(root, t1_images)
+
+    # --- Local features ---
+    local_feats = extract_features.main(
+        FEATURE_CONF, root, out_dir,
+        image_list=image_list,
+    )
+
+    # --- Pairs ---
+    pairs_path = out_dir / "pairs-t1.txt"
+    if sequential:
+        if pairs_from_sequential is None:
+            raise RuntimeError(
+                "pairs_from_sequential not available in this hloc version. "
+                "Set sequential=False to use retrieval-based pairing instead."
+            )
+        pairs_from_sequential.main(
+            pairs_path,
+            image_list=image_list,
+            window_size=seq_window,
+        )
+        global_feats = None
+    else:
+        global_feats = extract_features.main(
+            RETRIEVAL_CONF, root, out_dir,
+            image_list=image_list,
+        )
+        pairs_from_retrieval.main(
+            global_feats, pairs_path, num_matched=num_retrieval_matches
+        )
+
+    # --- Matches ---
+    matches = match_features.main(
+        MATCHER_CONF, pairs_path, FEATURE_CONF["output"], out_dir,
+        matches=out_dir / "matches-t1.h5",
+    )
+
+    # --- Reconstruction ---
+
+    sfm_dir = out_dir / "sfm"
+    reconstruction.main(
+        sfm_dir=sfm_dir,
+        image_dir=root,
+        pairs=pairs_path,
+        features=local_feats,
+        matches=matches,
+        image_list=image_list,
+        camera_mode=pycolmap.CameraMode.SINGLE,
+        image_options={"camera_model": "OPENCV_FISHEYE"},
+    )
+
+    return {
+        "sfm_dir": sfm_dir,
+        "image_list": image_list,
+        "global_feats": global_feats,
+        "local_feats": local_feats,
+        "matches": matches,
+    }
