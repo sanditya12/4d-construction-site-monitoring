@@ -12,7 +12,7 @@ Given two sets of raw images and their corresponding SfM models, the pipeline re
  
 Edit the paths and intrinsics at the top of `localization.py`, then run:
 ```bash
-python code/localization.py
+python3 code/localization.py
 ```
  
 This produces `outputs/t2_localize/t2_poses.txt` containing the estimated pose of each t2 image in the t1 coordinate frame.
@@ -20,7 +20,7 @@ This produces `outputs/t2_localize/t2_poses.txt` containing the estimated pose o
 **Step 2 — Compute the similarity transform**
  
 ```bash
-python code/alignment.py
+python3 code/alignment.py
 ```
  
 This reads the t2 poses and the t1 COLMAP model and outputs the similarity transform (R, t, s) that maps the t2 SfM frame into the t1 frame, saved to `outputs/alignment.npz` and `outputs/alignment.txt`.
