@@ -522,23 +522,13 @@ def main():
     root = "/home/kanishka/4d_reconstruction/registration"
     root = Path(root)
 
-    target_month = "may"
+    target_month = "july"
     sessions= {"may":"t1", "july":"t2", "december":"t3"}
 
     t1_out = root / f"floor1/outputs/test/sfm_{target_month}_clean"
 
     print(f"Starting clean SfM reconstruction for [{target_month}] (1:1 frames and masks)...")
 
-    # t1_result = build_sfm_mask_extrinsics(
-    #     root=root,
-    #     images_cam0=root / f"floor1/data/subsampled/{target_month}/sampled_rotated_frames/cam0",
-    #     images_cam1=root / f"floor1/data/subsampled/{target_month}/sampled_rotated_frames/cam1",
-    #     out_dir=t1_out,
-    #     masks_cam0=root / f"floor1/data/subsampled/{target_month}/masks_sam3_clean/cam0",
-    #     masks_cam1=root / f"floor1/data/subsampled/{target_month}/masks_sam3_clean/cam1",
-    #     seq_window=20,
-    #     session= sessions[target_month]
-    # )
     t1_result = build_sfm_mask_extrinsics(
             root=root,
             images_cam0=root / f"floor1/data/test/images/cam0",
