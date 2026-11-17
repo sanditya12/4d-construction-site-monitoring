@@ -8,7 +8,7 @@ Given two sets of raw images and their corresponding SfM models, the pipeline re
 
 ### Usage
 
-**Step 1 — Localize t2 images against the t1 map**
+**1. Localize t2 images against the t1 map**
  
 Edit the paths and intrinsics at the top of `localization.py`, then run:
 ```bash
@@ -17,7 +17,7 @@ python3 code/localization.py
  
 This produces `outputs/t2_localize/t2_poses.txt` containing the estimated pose of each t2 image in the t1 coordinate frame.
  
-**Step 2 — Compute the similarity transform**
+**2. Compute the similarity transform**
  
 ```bash
 python3 code/alignment.py
@@ -25,16 +25,21 @@ python3 code/alignment.py
  
 This reads the t2 poses and the t1 COLMAP model and outputs the similarity transform (R, t, s) that maps the t2 SfM frame into the t1 frame, saved to `outputs/alignment.npz` and `outputs/alignment.txt`.
  
-**Intrinsics**
+
+**Parameters to change**
+
+***Camera Intrinsics***
  
-Set your camera intrinsics in `localization.py`:
+In `localization.py`:
 ```python
 fx, fy, cx, cy = 1031.98, 1032.67, 1920.0, 1920.0
 k1, k2, k3, k4 = 0.0348231, -0.0017807, 0.00474112, -0.00197457
 w, h = 3840, 3840
 ```
- 
-The camera model is `OPENCV_FISHEYE`. To read the intrinsics estimated by COLMAP during t1 reconstruction, run:
+
+The camera model is `OPENCV_FISHEYE`. 
+
+To read the intrinsics estimated by COLMAP during t1 reconstruction, run:
 ```python
 utils.dump_t1_cameras_txt(sfm_dir, output_dir)
 ```
