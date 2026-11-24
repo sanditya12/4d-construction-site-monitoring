@@ -1,0 +1,15 @@
+[project]
+name = "03-sessions-alignment"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "h5py>=3.16.0",
+    "hloc",
+    "numpy>=2.5.5",
+    "plotly>=7.1.0",
+    "pycolmap>=4.2.1",
+    "pyyaml>=6.0.3",
+]
+
+[tool.uv.sources]
+hloc = { path = "/home_domuser2/s84klaks/src/4d-construction-site-monitoring/03_sessions_alignment/Hierarchical-Localization", editable = true }

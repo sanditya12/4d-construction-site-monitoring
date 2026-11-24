@@ -67,8 +67,9 @@ def geodesic_angle(R1: np.ndarray, R2: np.ndarray) -> float:
     return float(np.arccos(c))
 
 
-def umeyama(src: np.ndarray, dst: np.ndarray):
-    """Similarity (R, t, s) minimising ||s R src + t - dst||. Needs >= 3 points."""
+def umeyama(src: np.ndarray, dst: np.ndarray, with_scale: bool = True):
+    """Similarity (R, t, s) minimising ||s R src + t - dst||. Needs >= 3 points.
+    with_scale=False fixes s = 1 (rigid fit)."""
     n = len(src)
     if n < 3:
         raise ValueError("Umeyama needs at least 3 points")
@@ -80,16 +81,26 @@ def umeyama(src: np.ndarray, dst: np.ndarray):
     U, D, Vt = np.linalg.svd(dc.T @ sc / n)
     S = np.diag([1.0, 1.0, np.sign(np.linalg.det(U @ Vt))])
     R = U @ S @ Vt
-    s = float((D * np.diag(S)).sum() / var_s)
+    s = float((D * np.diag(S)).sum() / var_s) if with_scale else 1.0
     t = mu_d - s * R @ mu_s
     return R, t, s
+
+
+def pairwise_scale(src, dst, n=20000, seed=0):
+    """Rotation-free scale estimate: ratio of distances between random camera pairs."""
+    rng = np.random.default_rng(seed)
+    i, j = rng.integers(0, len(src), n), rng.integers(0, len(src), n)
+    ds, dd = np.linalg.norm(src[i] - src[j], axis=1), np.linalg.norm(dst[i] - dst[j], axis=1)
+    k = ds > 1e-6
+    r = dd[k] / ds[k]
+    return np.median(r), np.percentile(r, 10), np.percentile(r, 90)
 
 
 def apply_sim(pts: np.ndarray, R, t, s) -> np.ndarray:
     return s * pts @ R.T + t
 
 
-def umeyama_ransac(src, dst, thresh, iters=3000, sample_size=6, seed=0):
+def umeyama_ransac(src, dst, thresh, iters=3000, sample_size=6, seed=0, with_scale=True):
     """MSAC-style robust similarity fit. Returns R, t, s, inlier_mask."""
     rng = np.random.default_rng(seed)
     n = len(src)
@@ -103,7 +114,7 @@ def umeyama_ransac(src, dst, thresh, iters=3000, sample_size=6, seed=0):
         if sv[1] < 1e-2 * sv[0]:
             continue
         try:
-            R, t, s = umeyama(src[idx], dst[idx])
+            R, t, s = umeyama(src[idx], dst[idx], with_scale)
         except ValueError:
             continue
         if not np.isfinite(s) or s <= 0:
@@ -117,7 +128,7 @@ def umeyama_ransac(src, dst, thresh, iters=3000, sample_size=6, seed=0):
                            "(check name matching / pose convention)")
     inl = best_inl
     for _ in range(10):  # iterative refit on inliers
-        R, t, s = umeyama(src[inl], dst[inl])
+        R, t, s = umeyama(src[inl], dst[inl], with_scale)
         new_inl = np.linalg.norm(apply_sim(src, R, t, s) - dst, axis=1) < thresh
         if new_inl.sum() < 4:
             raise RuntimeError("Refit collapsed; threshold too tight?")
@@ -266,16 +277,21 @@ def match_cameras(t1_model, t2_model, poses, far_mult=3.0):
     return names, np.array(c1), np.array(c2), np.array(R1), np.array(R2)
 
 
-def align(names, c1, c2, R1, R2, thresh_frac, rot_thresh_deg, method="ransac"):
+def align(names, c1, c2, R1, R2, thresh_frac, rot_thresh_deg, method="ransac", fix_scale=False):
+    med, p10, p90 = pairwise_scale(c2, c1)
+    print(f"  Pairwise distance ratio t1/t2 (rotation-free scale check): "
+          f"median {med:.4f}  (10-90%: {p10:.3f}-{p90:.3f})")
+    print(f"  t1 camera extent: {np.ptp(c1, axis=0).round(2)}   t2 extent: {np.ptp(c2, axis=0).round(2)}")
+    ws = not fix_scale
     if method == "umeyama":
         # Plain least-squares fit on ALL matched centres: no outlier rejection.
-        R, t, s = umeyama(c2, c1)
+        R, t, s = umeyama(c2, c1, ws)
         inl = np.ones(len(c1), bool)
         print(f"  Plain Umeyama on all {len(c1)} matched cameras  scale={s:.5f}")
     else:
         thresh = thresh_frac * np.linalg.norm(c1 - c1.mean(0), axis=1).max()
         print(f"  RANSAC threshold: {thresh:.4f} (= {thresh_frac:.0%} of t1 camera radius)")
-        R, t, s, inl = umeyama_ransac(c2, c1, thresh)
+        R, t, s, inl = umeyama_ransac(c2, c1, thresh, with_scale=ws)
         print(f"  Position inliers: {inl.sum()}/{len(c1)}  scale={s:.5f}")
 
     # Rotation consistency: R1 = R2 @ R^T  =>  R_i := R1^T R2 should equal R_align
@@ -291,7 +307,7 @@ def align(names, c1, c2, R1, R2, thresh_frac, rot_thresh_deg, method="ransac"):
     if method == "umeyama":
         pass                                   # keep the plain fit as-is
     elif final.sum() >= 10:
-        R, t, s = umeyama(c2[final], c1[final])
+        R, t, s = umeyama(c2[final], c1[final], ws)
         print(f"  Refit on {final.sum()} position+rotation inliers  scale={s:.5f}")
     else:
         print("  WARNING: few pairs pass the rotation check; keeping position-only fit. "
@@ -409,6 +425,8 @@ def parse_args():
     ap.add_argument("--method", choices=["ransac", "umeyama"], default="ransac",
                     help="ransac: robust fit + rotation filter (default); "
                          "umeyama: plain least squares on all matched cameras")
+    ap.add_argument("--fix-scale", action="store_true",
+                    help="force scale = 1 (both maps are metric because of the calibrated rig)")
     ap.add_argument("--far-mult", type=float, default=3.0,
                     help="drop poses farther than this many t1-radii from the t1 centroid "
                          "(use inf to disable; only matters for --method umeyama)")
@@ -434,7 +452,7 @@ def main():
     names, c1, c2, R1, R2 = match_cameras(t1, t2, poses, args.far_mult)
 
     print("\n=== Alignment ===")
-    R, t, s = align(names, c1, c2, R1, R2, args.thresh_frac, args.rot_thresh_deg, args.method)
+    R, t, s = align(names, c1, c2, R1, R2, args.thresh_frac, args.rot_thresh_deg, args.method, args.fix_scale)
     save_alignment(args.out_model.parent / f"alignment_{args.method}", R, t, s, len(names))
 
     raw_xyz, raw_rgb = points_of(t2)           # before transform

@@ -2,7 +2,7 @@
 Align t2 SfM to t1 frame using rotational averaging, then visualize both
 point clouds together in plotly (opens in browser).
 
-Run: python3 code/align_and_visualize.py
+Run: python3 code/alignment.py
 """
 
 from pathlib import Path
@@ -274,11 +274,10 @@ with open(out_alignment_txt, "w") as f:
 print(f"Saved alignment -> {out_alignment_txt}")
 print(f"Saved alignment -> {out_alignment_npz}")
 
+
 # ---------------------------------------------------------------------------
 # 6. Load and align point clouds
 # ---------------------------------------------------------------------------
-
-
 
 print("\n=== Loading point clouds ===")
 pts_t1, cols_t1     = load_ply(t1_ply)
@@ -348,10 +347,11 @@ print(f"\nSaved to {out_html}")
 print(f"Open with: xdg-open {out_html}")
 
 
-
 print("t1 bbox:", pts_t1.min(axis=0).round(2), pts_t1.max(axis=0).round(2))
 print("t2 bbox (raw):", pts_t2_raw.min(axis=0).round(2), pts_t2_raw.max(axis=0).round(2))
 print("t2 bbox (aligned):", pts_t2.min(axis=0).round(2), pts_t2.max(axis=0).round(2))
+
+
 
 
 # ---------------------------------------------------------------------------
