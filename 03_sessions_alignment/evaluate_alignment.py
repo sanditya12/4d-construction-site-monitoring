@@ -2,20 +2,6 @@
 Evaluate the December->July alignment (alignment.npz from alignment.py) against
 ground truth for both sessions.
 
-GT format: TUM trajectory files (t x y z qx qy qz qw), cam0 positions, one per
-session, matched to SfM cam0 images by the timestamp in the file name.
-
-IMPORTANT: steps 3-4 assume BOTH GT files are in ONE common frame. If each month's
-GT comes from its own run (own origin), set SHARED_GT_FRAME = False: only the
-per-map checks (step 1-2) are then meaningful.
-
-Idea
-  1. Fit  July SfM frame -> GT frame   (Sim3, from July GT)    => July map error
-  2. Fit  Dec  SfM frame -> GT frame   (Sim3, from Dec GT)     => Dec map error
-  3. GT-derived Dec->July transform = (1)^-1 o (2); compare with the estimated one
-  4. End-to-end: Dec cams -> estimated alignment -> July -> GT frame, compared to
-     Dec GT. Dec GT is NOT used to build this path, so it is a held-out test.
-
 Run: python eval_alignment.py
 """
 import re
